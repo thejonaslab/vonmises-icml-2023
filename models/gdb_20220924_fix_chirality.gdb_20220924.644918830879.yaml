@@ -1,0 +1,85 @@
+batch_size: 32
+epoch_n : 2000
+persistent_workers: True
+num_workers: 4
+
+dataset:
+  mol_db: /jonaslab/projects/conformation/data/mol-data/GDB-17-stereo-pt-conf-mols.db
+  target_file: data/targets.db/GDB-17-stereo-pt
+  
+max_atoms: 64
+smallest_element_subset: "HCONFSPCl"
+
+shuffle: True
+train_epoch_size: 10000
+test_epoch_size: 6000
+clip_grad: True
+clip_cutoff: 1.0
+
+dataset_params:
+  cache_features: False
+  preprocess_config:
+    force_chi_to_tet: True
+    force_stereo_to_double: True
+    conform_to_existing_conf_idx: 0 # -1
+  atom_feat_config:
+    atom_types: [1, 6, 7, 8, 9, 15, 16, 17]
+    atomic_num: True
+    partial_charge: True
+    mmff_atom_types_one_hot: True
+    valence_types: [1, 2, 3, 4, 5, 6]
+    valence: True
+    aromatic: True
+    hybridization: True
+    assign_stereo: True
+    charge_types: [-1, 0, 1]
+    formal_charge: True
+    r_covalent: True
+    r_vanderwals: True
+    default_valence: True
+    max_ring_size: 8
+    rings: True
+    chirality: True
+    mmff94_atom_types: null
+    hybridization_types: null
+    chi_types: null
+    degree_types: [1, 2, 3, 4, 5, 6]
+    degree: True
+    num_hydrogen_types: [0, 1, 2, 3]
+    num_hydrogen: True
+    num_radical_electron_types: [0, 1, 2]
+    num_radical_electron: True
+  bond_feat_config:
+    conjugated: True
+    bond_types: [0., 1., 1.5, 2., 3.]
+    bond_type: True
+    max_path_length: 10
+    bond_ring: True
+    bond_stereo: True
+    bond_stereo_types: null
+    shortest_path: False
+    same_ring: True
+    rot_bond: True
+  graph_build_config:
+    max_nodes: 512
+    max_torsions: 32768
+    include_target: True
+
+net_params:
+  hidden_size: 256
+  num_layers: 20
+  final_linear_size: 128
+  final_output_size: 4
+  reduce: mean
+  min_conc: 1.0
+  max_conc: 20.0
+  init_norm: "layer"
+  linear_first: False
+  extra_norm: ""
+  extra_layers: 1
+  end_norm: null
+  conc_norm: batch
+
+opt_params:
+  lr: 0.0001
+

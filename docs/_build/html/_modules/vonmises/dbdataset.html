@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>vonmises.dbdataset &mdash; conformation-vonmises  documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/doctools.js"></script>
+        <script src="../../_static/sphinx_highlight.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            conformation-vonmises
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html">vonmises</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">conformation-vonmises</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">vonmises.dbdataset</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for vonmises.dbdataset</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot; PyTorch Dataset. &quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span>
+
+<span class="kn">from</span> <span class="nn">rdkit</span> <span class="kn">import</span> <span class="n">Chem</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy</span> <span class="kn">import</span> <span class="n">event</span><span class="p">,</span> <span class="n">create_engine</span><span class="p">,</span> <span class="n">MetaData</span><span class="p">,</span> <span class="n">select</span><span class="p">,</span> <span class="n">Table</span><span class="p">,</span> <span class="n">text</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy.engine</span> <span class="kn">import</span> <span class="n">Engine</span>
+<span class="kn">from</span> <span class="nn">torch.utils.data</span> <span class="kn">import</span> <span class="n">Dataset</span><span class="p">,</span> <span class="n">Sampler</span>
+
+<span class="kn">from</span> <span class="nn">vonmises.featurize_mols</span> <span class="kn">import</span> <span class="n">FeaturizeMol</span>
+<span class="kn">from</span> <span class="nn">vonmises.graph_builders</span> <span class="kn">import</span> <span class="n">BuildVonMisesGraph</span>
+
+
+<div class="viewcode-block" id="set_sqlite_pragma"><a class="viewcode-back" href="../../vonmises.html#vonmises.dbdataset.set_sqlite_pragma">[docs]</a><span class="nd">@event</span><span class="o">.</span><span class="n">listens_for</span><span class="p">(</span><span class="n">Engine</span><span class="p">,</span> <span class="s2">&quot;connect&quot;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">set_sqlite_pragma</span><span class="p">(</span><span class="n">dbapi_connection</span><span class="p">,</span> <span class="n">connection_record</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Try and increase performance: https://blog.devart.com/increasing-sqlite-performance.html.</span>
+
+<span class="sd">    :param dbapi_connection: Database connection.</span>
+<span class="sd">    :param connection_record: Connection record.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">cursor</span> <span class="o">=</span> <span class="n">dbapi_connection</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+    <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;PRAGMA locking_mode=EXCLUSIVE&quot;</span><span class="p">)</span>
+    <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;PRAGMA synchronous=OFF&quot;</span><span class="p">)</span>
+    <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;PRAGMA query_only=TRUE&quot;</span><span class="p">)</span>
+    <span class="c1"># If the argument N is positive then the suggested cache size is set to N.</span>
+    <span class="c1"># If the argument N is negative, then the number of cache pages is adjusted to be a number</span>
+    <span class="c1"># of pages that would use approximately abs(N*1024) bytes of memory based on the current page size.</span>
+    <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;PRAGMA cache_size=-5000000&quot;</span><span class="p">)</span>
+    <span class="n">cursor</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+    
+<div class="viewcode-block" id="TargetsLoader"><a class="viewcode-back" href="../../vonmises.html#vonmises.dbdataset.TargetsLoader">[docs]</a><span class="k">class</span> <span class="nc">TargetsLoader</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Database connection for loading and deserializing targets from a database.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">db_filename</span><span class="p">,</span> <span class="n">row_deserialize</span><span class="p">,</span> <span class="n">table_name</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param db_filename: Filename of database.</span>
+<span class="sd">        :param row_deserialize: Function to use for row deserialization.</span>
+<span class="sd">        :param table_name: Table name.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">assert</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">db_filename</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">db_filename</span> <span class="o">=</span> <span class="n">db_filename</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">row_deserialize</span> <span class="o">=</span> <span class="n">row_deserialize</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">engine</span> <span class="o">=</span> <span class="n">create_engine</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;sqlite+pysqlite:///</span><span class="si">{</span><span class="n">db_filename</span><span class="si">}</span><span class="s2">?immutable=1&quot;</span><span class="p">,</span> <span class="n">future</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">conn</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">engine</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">table_name</span> <span class="o">=</span> <span class="n">table_name</span>
+
+    <span class="k">def</span> <span class="fm">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mol_id</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param mol_id: Molecule ID.</span>
+<span class="sd">        :return: Deserialized row.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">row</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">text</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;select * from </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">table_name</span><span class="si">}</span><span class="s1"> where mol_id=</span><span class="si">{</span><span class="n">mol_id</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">))</span><span class="o">.</span><span class="n">one</span><span class="p">()</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">row_deserialize</span><span class="p">(</span><span class="n">row</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="db_row_to_chirality_targets"><a class="viewcode-back" href="../../vonmises.html#vonmises.dbdataset.db_row_to_chirality_targets">[docs]</a><span class="k">def</span> <span class="nf">db_row_to_chirality_targets</span><span class="p">(</span><span class="n">row</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Deserialize a row from a chirality targets database.</span>
+
+<span class="sd">    :param row: Database row.</span>
+<span class="sd">    :return: Deserialized chirality targets.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">atom_n</span> <span class="o">=</span> <span class="n">row</span><span class="p">[</span><span class="s1">&#39;atom_n&#39;</span><span class="p">]</span>
+    <span class="n">chiralities</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">frombuffer</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;chiralities_bin&#39;</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float16</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">chiralities</span><span class="o">.</span><span class="n">size</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">chiralities</span> <span class="o">=</span> <span class="n">chiralities</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">atom_n</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">atom_indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">frombuffer</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;atom_idx_bin&#39;</span><span class="p">],</span>
+                                 <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;chiralities&#39;</span><span class="p">:</span> <span class="n">chiralities</span><span class="p">,</span>
+            <span class="s1">&#39;atom_indices&#39;</span><span class="p">:</span> <span class="n">atom_indices</span><span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="db_row_to_length_targets"><a class="viewcode-back" href="../../vonmises.html#vonmises.dbdataset.db_row_to_length_targets">[docs]</a><span class="k">def</span> <span class="nf">db_row_to_length_targets</span><span class="p">(</span><span class="n">row</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Deserialize a row from a bond length targets database.</span>
+
+<span class="sd">    :param row: Database row.</span>
+<span class="sd">    :return: Deserialized bond length targets.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">bond_n</span> <span class="o">=</span> <span class="n">row</span><span class="p">[</span><span class="s1">&#39;bond_n&#39;</span><span class="p">]</span>
+    <span class="n">bond_lengths</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">frombuffer</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;bond_lengths_bin&#39;</span><span class="p">],</span>
+                                  <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float16</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">bond_n</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">bond_indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">frombuffer</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;bond_idx_bin&#39;</span><span class="p">],</span>
+                                 <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+    
+    <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;lengths&#39;</span><span class="p">:</span> <span class="n">bond_lengths</span><span class="p">,</span>
+            <span class="s1">&#39;bond_indices&#39;</span><span class="p">:</span> <span class="n">bond_indices</span><span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="db_row_to_angle_targets"><a class="viewcode-back" href="../../vonmises.html#vonmises.dbdataset.db_row_to_angle_targets">[docs]</a><span class="k">def</span> <span class="nf">db_row_to_angle_targets</span><span class="p">(</span><span class="n">row</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Deserialize a row from a bond angle targets database.</span>
+
+<span class="sd">    :param row: Database row.</span>
+<span class="sd">    :return: Deserialized bond angle targets.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">angle_n</span> <span class="o">=</span> <span class="n">row</span><span class="p">[</span><span class="s1">&#39;angle_n&#39;</span><span class="p">]</span>
+    <span class="n">angles</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">frombuffer</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;angles_bin&#39;</span><span class="p">],</span>
+                            <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float16</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">angle_n</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">atom_indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">frombuffer</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;atom_idx_bin&#39;</span><span class="p">],</span>
+                                 <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">angle_n</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+    
+    <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;angles&#39;</span><span class="p">:</span> <span class="n">angles</span><span class="p">,</span>
+            <span class="s1">&#39;angle_triplets&#39;</span><span class="p">:</span> <span class="n">atom_indices</span><span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="db_row_to_torsion_targets"><a class="viewcode-back" href="../../vonmises.html#vonmises.dbdataset.db_row_to_torsion_targets">[docs]</a><span class="k">def</span> <span class="nf">db_row_to_torsion_targets</span><span class="p">(</span><span class="n">row</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Deserialize a row from a torsion targets database.</span>
+
+<span class="sd">    :param row: Database row.</span>
+<span class="sd">    :return: Deserialized torsion targets.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">bond_n</span> <span class="o">=</span> <span class="n">row</span><span class="p">[</span><span class="s1">&#39;bond_n&#39;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">bond_n</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;angles&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]),</span>
+                <span class="s1">&#39;bond_indices&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">([</span><span class="mi">0</span><span class="p">]),</span>
+                <span class="s1">&#39;bond_classes&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">([</span><span class="mi">0</span><span class="p">]),</span>
+                <span class="s1">&#39;atom_index_tuples&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]),</span>
+                <span class="s1">&#39;bond_indices_with_chirality&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">([</span><span class="mi">0</span><span class="p">])}</span>
+
+    <span class="n">angles</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">frombuffer</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;angles_bin&#39;</span><span class="p">],</span>
+                            <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float16</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">bond_n</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="n">angles</span><span class="o">.</span><span class="n">shape</span>
+    <span class="n">bond_indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">frombuffer</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;bond_indices_bin&#39;</span><span class="p">],</span>
+                                 <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+    <span class="n">atom_indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">frombuffer</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;atom_indices_bin&#39;</span><span class="p">],</span>
+                                 <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">bond_n</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+    <span class="n">bond_classes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">frombuffer</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;bond_classes_bin&#39;</span><span class="p">],</span>
+                                 <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+    <span class="n">bond_indices_with_chirality</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">frombuffer</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;bond_indices_with_chirality_bin&#39;</span><span class="p">],</span>
+                                                <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+    
+    <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;angles&#39;</span><span class="p">:</span> <span class="n">angles</span><span class="p">,</span>
+            <span class="s1">&#39;bond_indices&#39;</span><span class="p">:</span> <span class="n">bond_indices</span><span class="p">,</span>
+            <span class="s1">&#39;bond_classes&#39;</span><span class="p">:</span> <span class="n">bond_classes</span><span class="p">,</span>
+            <span class="s1">&#39;atom_index_tuples&#39;</span><span class="p">:</span> <span class="n">atom_indices</span><span class="p">,</span>
+            <span class="s1">&#39;bond_indices_with_chirality&#39;</span><span class="p">:</span> <span class="n">bond_indices_with_chirality</span><span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="GraphDBDataset"><a class="viewcode-back" href="../../vonmises.html#vonmises.dbdataset.GraphDBDataset">[docs]</a><span class="k">class</span> <span class="nc">GraphDBDataset</span><span class="p">(</span><span class="n">Dataset</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Dataset class for loading molecular graphs and targets, using on-disk sqlite databases.</span>
+
+<span class="sd">    Note: we delay connecting to the database until we request the first item _and_ we check to see if the PID is the</span>
+<span class="sd">    same; this is to deal with Pytorch&#39;s &quot;numworkers&quot; forking and difficulties with Python Multiprocessing.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">db_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                 <span class="n">molecule_ids</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
+                 <span class="n">torsion_targets_db</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                 <span class="n">angle_targets_db</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                 <span class="n">len_targets_db</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                 <span class="n">chirality_targets_db</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                 <span class="n">cache_features</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">atom_feat_config</span><span class="p">:</span> <span class="n">Dict</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">bond_feat_config</span><span class="p">:</span> <span class="n">Dict</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">preprocess_config</span><span class="p">:</span> <span class="n">Dict</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">graph_build_config</span><span class="p">:</span> <span class="n">Dict</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param db_path: Path to SQLite database containing molecules.</span>
+<span class="sd">        :param molecule_ids: Molecule ids in SQLite database.</span>
+<span class="sd">        :param torsion_targets_db: Path to torsion targets database.</span>
+<span class="sd">        :param angle_targets_db: Path to bond angle targets database.</span>
+<span class="sd">        :param len_targets_db: Path to bond length targets database.</span>
+<span class="sd">        :param chirality_targets_db: Path to chirality targets database.</span>
+<span class="sd">        :param cache_features: Whether or not to cache features in memory for faster loading.</span>
+<span class="sd">        :param atom_feat_config: Dictionary of atom parameters.</span>
+<span class="sd">        :param bond_feat_config: Dictionary of bond parameters.</span>
+<span class="sd">        :param graph_build_config: Dictionary of graph building parameters.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">Dataset</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">graph_build_config</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">graph_build_config</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">if</span> <span class="n">bond_feat_config</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">bond_feat_config</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">if</span> <span class="n">atom_feat_config</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">atom_feat_config</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">featurize_mol</span> <span class="o">=</span> <span class="n">FeaturizeMol</span><span class="p">(</span><span class="n">atom_feat_config</span><span class="p">,</span> <span class="n">bond_feat_config</span><span class="p">,</span> <span class="n">preprocess_config</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">build_graph</span> <span class="o">=</span> <span class="n">BuildVonMisesGraph</span><span class="p">(</span><span class="o">**</span><span class="n">graph_build_config</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">molecule_ids</span> <span class="o">=</span> <span class="n">molecule_ids</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">db_path</span> <span class="o">=</span> <span class="n">db_path</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">torsion_targets_db</span> <span class="o">=</span> <span class="n">torsion_targets_db</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">angle_targets_db</span> <span class="o">=</span> <span class="n">angle_targets_db</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">len_targets_db</span> <span class="o">=</span> <span class="n">len_targets_db</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">chirality_targets_db</span> <span class="o">=</span> <span class="n">chirality_targets_db</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sql_engine</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cache_features</span> <span class="o">=</span> <span class="n">cache_features</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cache</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">created_pid</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getpid</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_connect_dbs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Function to be run after forking to make sure we connect the databases; always reconnect on process change.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sql_engine</span> <span class="o">=</span> <span class="n">create_engine</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;sqlite+pysqlite:///</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">db_path</span><span class="si">}</span><span class="s2">?immutable=1&quot;</span><span class="p">,</span> <span class="n">future</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">molecules_table</span> <span class="o">=</span> <span class="n">Table</span><span class="p">(</span><span class="s2">&quot;molecules&quot;</span><span class="p">,</span> <span class="n">MetaData</span><span class="p">(),</span> <span class="n">autoload_with</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">sql_engine</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">molecules_conn</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sql_engine</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">torsion_targets_loader</span> <span class="o">=</span> <span class="n">TargetsLoader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">torsion_targets_db</span><span class="p">,</span> <span class="n">db_row_to_torsion_targets</span><span class="p">,</span> <span class="s1">&#39;torsions&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">angle_targets_loader</span> <span class="o">=</span> <span class="n">TargetsLoader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">angle_targets_db</span><span class="p">,</span> <span class="n">db_row_to_angle_targets</span><span class="p">,</span> <span class="s1">&#39;angles&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">length_targets_loader</span> <span class="o">=</span> <span class="n">TargetsLoader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">len_targets_db</span><span class="p">,</span> <span class="n">db_row_to_length_targets</span><span class="p">,</span> <span class="s1">&#39;lengths&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">chirality_targets_loader</span> <span class="o">=</span> <span class="n">TargetsLoader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">chirality_targets_db</span><span class="p">,</span> <span class="n">db_row_to_chirality_targets</span><span class="p">,</span>
+                                                      <span class="s1">&#39;chiralities&#39;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">molecule_ids</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">idx</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return the graph representation of a molecule.</span>
+
+<span class="sd">        :param idx: Which molecule to process.</span>
+<span class="sd">        :return: Graph dictionary.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">reconnect_db</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">my_pid</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getpid</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">created_pid</span> <span class="o">!=</span> <span class="n">my_pid</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;dataloader running in new process, pids: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">created_pid</span><span class="si">}</span><span class="s2"> -&gt; </span><span class="si">{</span><span class="n">my_pid</span><span class="si">}</span><span class="s2">; reconnecting DB&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">created_pid</span> <span class="o">=</span> <span class="n">my_pid</span>
+            <span class="n">reconnect_db</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">sql_engine</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># numworkers = 0; first time running</span>
+            <span class="n">reconnect_db</span> <span class="o">=</span> <span class="kc">True</span>
+            
+        <span class="k">if</span> <span class="n">reconnect_db</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_connect_dbs</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cache_features</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">idx</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">cache</span><span class="p">:</span>
+                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">cache</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
+
+        <span class="c1"># Load molecule</span>
+        <span class="n">query</span> <span class="o">=</span> <span class="n">select</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">molecules_table</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">mol</span><span class="p">])</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">molecules_table</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">id</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">molecule_ids</span><span class="p">[</span><span class="n">idx</span><span class="p">])</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">molecules_conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">query</span><span class="p">)</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()</span>
+        <span class="n">mol</span> <span class="o">=</span> <span class="n">Chem</span><span class="o">.</span><span class="n">Mol</span><span class="p">(</span><span class="n">res</span><span class="p">[</span><span class="s1">&#39;mol&#39;</span><span class="p">])</span>
+        <span class="n">uid</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">molecule_ids</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
+
+        <span class="c1"># Load targets</span>
+        <span class="n">chirality_targets</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">chirality_targets_loader</span><span class="p">[</span><span class="n">uid</span><span class="p">]</span>
+        <span class="n">length_targets</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">length_targets_loader</span><span class="p">[</span><span class="n">uid</span><span class="p">]</span>
+        <span class="n">angle_targets</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">angle_targets_loader</span><span class="p">[</span><span class="n">uid</span><span class="p">]</span>
+        <span class="n">torsion_targets</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">torsion_targets_loader</span><span class="p">[</span><span class="n">uid</span><span class="p">]</span>
+
+        <span class="c1"># Featurize molecule</span>
+        <span class="n">features</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">featurize_mol</span><span class="p">(</span><span class="n">mol</span><span class="p">,</span> <span class="n">angle_targets</span><span class="p">[</span><span class="s1">&#39;angle_triplets&#39;</span><span class="p">])</span>
+
+        <span class="c1"># Build graph representation</span>
+        <span class="n">graph</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">build_graph</span><span class="p">(</span><span class="n">mol</span><span class="p">,</span> <span class="n">torsion_targets</span><span class="p">,</span> <span class="n">angle_targets</span><span class="p">,</span> <span class="n">length_targets</span><span class="p">,</span> <span class="n">chirality_targets</span><span class="p">,</span> <span class="n">features</span><span class="p">)</span>
+        <span class="n">graph</span><span class="p">[</span><span class="s1">&#39;uid&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">uid</span><span class="p">])</span>
+
+        <span class="c1"># Save to cache</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cache_features</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cache</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">graph</span>
+
+        <span class="k">return</span> <span class="n">graph</span>
+
+    <span class="k">def</span> <span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s1">&#39;</span><span class="si">{}</span><span class="s1">(</span><span class="si">{}</span><span class="s1">)&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="create_dataset"><a class="viewcode-back" href="../../vonmises.html#vonmises.dbdataset.create_dataset">[docs]</a><span class="k">def</span> <span class="nf">create_dataset</span><span class="p">(</span><span class="n">mol_db_filename</span><span class="p">,</span> <span class="n">target_basename</span><span class="p">,</span> <span class="n">dataset_ids</span><span class="p">,</span> <span class="o">**</span><span class="n">exp_config_params</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">GraphDBDataset</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Create a GraphDBDataset object.</span>
+
+<span class="sd">    :param mol_db_filename: Molecule database filename.</span>
+<span class="sd">    :param target_basename: Target databases base filename.</span>
+<span class="sd">    :param dataset_ids: List of ids.</span>
+<span class="sd">    :param exp_config_params: Experiment config parameters.</span>
+<span class="sd">    :return: GraphDBDataset object.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">GraphDBDataset</span><span class="p">(</span><span class="n">mol_db_filename</span><span class="p">,</span>
+                          <span class="n">dataset_ids</span><span class="p">,</span>
+                          <span class="n">target_basename</span> <span class="o">+</span> <span class="s1">&#39;.torsions.db&#39;</span><span class="p">,</span> 
+                          <span class="n">target_basename</span> <span class="o">+</span> <span class="s1">&#39;.angles.db&#39;</span><span class="p">,</span> 
+                          <span class="n">target_basename</span> <span class="o">+</span> <span class="s1">&#39;.lengths.db&#39;</span><span class="p">,</span>
+                          <span class="n">target_basename</span> <span class="o">+</span> <span class="s1">&#39;.chiralities.db&#39;</span><span class="p">,</span>
+                          <span class="o">**</span><span class="n">exp_config_params</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="SubsetSampler"><a class="viewcode-back" href="../../vonmises.html#vonmises.dbdataset.SubsetSampler">[docs]</a><span class="k">class</span> <span class="nc">SubsetSampler</span><span class="p">(</span><span class="n">Sampler</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A dataset sampler for sampling a subset of data for each epoch, in order to have epochs of the same size to</span>
+<span class="sd">    compare training performance across different datasets.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">epoch_size</span><span class="p">,</span> <span class="n">ds_size</span><span class="p">,</span> <span class="n">shuffle</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">world_size</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">rank</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">logging_name</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param epoch_size: Size of the epoch.</span>
+<span class="sd">        :param ds_size: Total size of the dataset.</span>
+<span class="sd">        :param shuffle: Whether or not to shuffle.</span>
+<span class="sd">        :param world_size: World size.</span>
+<span class="sd">        :param rank: Rank.</span>
+<span class="sd">        :param seed: Random seed.</span>
+<span class="sd">        :param logging_name: Logger name.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">epoch_size</span> <span class="o">=</span> <span class="n">epoch_size</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ds_size</span> <span class="o">=</span> <span class="n">ds_size</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pos</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">shuffle</span> <span class="o">=</span> <span class="n">shuffle</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">world_size</span> <span class="o">=</span> <span class="n">world_size</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rank</span> <span class="o">=</span> <span class="n">rank</span>
+        <span class="k">if</span> <span class="n">seed</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">seed</span> <span class="o">=</span> <span class="n">rank</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bit_generator</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">PCG64</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">default_rng</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bit_generator</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">compute_idx</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logging_name</span> <span class="o">=</span> <span class="n">logging_name</span>
+        <span class="k">if</span> <span class="n">logging_name</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logging_fid</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">logging_name</span><span class="si">}</span><span class="s2">.samples&quot;</span><span class="p">,</span> <span class="s1">&#39;a&#39;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="SubsetSampler.get_state"><a class="viewcode-back" href="../../vonmises.html#vonmises.dbdataset.SubsetSampler.get_state">[docs]</a>    <span class="k">def</span> <span class="nf">get_state</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns the state to reinitialize the sampler.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;pos&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">pos</span><span class="p">,</span>
+                <span class="s1">&#39;epoch_size&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">epoch_size</span><span class="p">,</span>
+                <span class="s1">&#39;idx&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">idx</span><span class="p">,</span>
+                <span class="s1">&#39;ds_size&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">ds_size</span><span class="p">,</span>
+                <span class="s1">&#39;bg_state&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">bit_generator</span><span class="o">.</span><span class="n">state</span><span class="p">}</span></div>
+
+<div class="viewcode-block" id="SubsetSampler.set_state"><a class="viewcode-back" href="../../vonmises.html#vonmises.dbdataset.SubsetSampler.set_state">[docs]</a>    <span class="k">def</span> <span class="nf">set_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state_dict</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set the state of the sampler.</span>
+
+<span class="sd">        :param state_dict: State dictionary.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">epoch_size</span> <span class="o">==</span> <span class="n">state_dict</span><span class="p">[</span><span class="s1">&#39;epoch_size&#39;</span><span class="p">]</span>
+        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">ds_size</span> <span class="o">==</span> <span class="n">state_dict</span><span class="p">[</span><span class="s1">&#39;ds_size&#39;</span><span class="p">]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">pos</span> <span class="o">=</span> <span class="n">state_dict</span><span class="p">[</span><span class="s1">&#39;pos&#39;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bit_generator</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="n">state_dict</span><span class="p">[</span><span class="s1">&#39;bg_state&#39;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">idx</span> <span class="o">=</span> <span class="n">state_dict</span><span class="p">[</span><span class="s1">&#39;idx&#39;</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="SubsetSampler.compute_idx"><a class="viewcode-back" href="../../vonmises.html#vonmises.dbdataset.SubsetSampler.compute_idx">[docs]</a>    <span class="k">def</span> <span class="nf">compute_idx</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute index.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">shuffle</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">idx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">rng</span><span class="o">.</span><span class="n">permutation</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ds_size</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ds_size</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">idx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">idx</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">idx</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">world_size</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">rank</span><span class="p">]</span></div>
+
+    <span class="k">def</span> <span class="fm">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">epoch_size</span> <span class="o">//</span> <span class="bp">self</span><span class="o">.</span><span class="n">world_size</span>
+
+    <span class="k">def</span> <span class="fm">__iter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="fm">__len__</span><span class="p">()):</span>
+            <span class="n">y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">idx</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">pos</span><span class="p">]</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">logging_name</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">logging_fid</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">y</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">logging_fid</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+            <span class="k">yield</span> <span class="n">y</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">pos</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pos</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">idx</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">pos</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">compute_idx</span><span class="p">()</span></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Kirk Swanson, Jake Williams, Eric Jonas.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

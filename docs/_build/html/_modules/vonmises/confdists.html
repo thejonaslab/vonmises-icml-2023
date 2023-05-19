@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>vonmises.confdists &mdash; conformation-vonmises  documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/doctools.js"></script>
+        <script src="../../_static/sphinx_highlight.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            conformation-vonmises
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html">vonmises</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">conformation-vonmises</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">vonmises.confdists</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for vonmises.confdists</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot; Conformation distributions and utilities for evaluation. &quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Dict</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">rdkit</span> <span class="kn">import</span> <span class="n">Chem</span>
+<span class="kn">from</span> <span class="nn">rdkit.Chem</span> <span class="kn">import</span> <span class="n">rdchem</span><span class="p">,</span> <span class="n">rdmolops</span>
+<span class="kn">from</span> <span class="nn">rdkit.Chem.Lipinski</span> <span class="kn">import</span> <span class="n">RotatableBondSmarts</span>
+
+<span class="kn">from</span> <span class="nn">vonmises</span> <span class="kn">import</span> <span class="n">mol_utils</span>
+
+
+<div class="viewcode-block" id="SampleDistribution"><a class="viewcode-back" href="../../vonmises.html#vonmises.confdists.SampleDistribution">[docs]</a><span class="k">class</span> <span class="nc">SampleDistribution</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A distribution of conformations with metadata.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mol</span><span class="p">:</span> <span class="n">rdchem</span><span class="o">.</span><span class="n">Mol</span><span class="p">,</span> <span class="n">meta</span><span class="p">:</span> <span class="n">Dict</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param mol: RDKit mol object.</span>
+<span class="sd">        :param meta: Metadata dictionary.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mol</span> <span class="o">=</span> <span class="n">Chem</span><span class="o">.</span><span class="n">Mol</span><span class="p">(</span><span class="n">mol</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">meta</span> <span class="o">=</span> <span class="p">{}</span> <span class="k">if</span> <span class="n">meta</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">meta</span>
+
+<div class="viewcode-block" id="SampleDistribution.get_dist_mats"><a class="viewcode-back" href="../../vonmises.html#vonmises.confdists.SampleDistribution.get_dist_mats">[docs]</a>    <span class="k">def</span> <span class="nf">get_dist_mats</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get distance matrix from conformations.</span>
+
+<span class="sd">        :return: Distance matrix.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">mol_utils</span><span class="o">.</span><span class="n">get_conf_dist</span><span class="p">(</span><span class="n">mol_utils</span><span class="o">.</span><span class="n">get_all_conf_pos</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mol</span><span class="p">))</span></div></div>
+
+
+<div class="viewcode-block" id="get_atom_pair_restrict_to_vm_preds"><a class="viewcode-back" href="../../vonmises.html#vonmises.confdists.get_atom_pair_restrict_to_vm_preds">[docs]</a><span class="k">def</span> <span class="nf">get_atom_pair_restrict_to_vm_preds</span><span class="p">(</span><span class="n">mol</span><span class="p">,</span> <span class="n">atom_index_a</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">atom_index_b</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">shortest_paths</span><span class="p">:</span> <span class="n">Dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Determine if distances between a particular pair of atoms are included in VM predictions.</span>
+
+<span class="sd">    :param mol: RDKit mol object.</span>
+<span class="sd">    :param atom_index_a: First atom index.</span>
+<span class="sd">    :param atom_index_b: Second atom index.</span>
+<span class="sd">    :param shortest_paths: Shortest paths dictionary.</span>
+<span class="sd">    :return: Boolean indicating inclusion.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">add</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">rotatable_bonds</span> <span class="o">=</span> <span class="p">[</span><span class="n">mol</span><span class="o">.</span><span class="n">GetBondBetweenAtoms</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span><span class="o">.</span><span class="n">GetIdx</span><span class="p">()</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span>
+                       <span class="n">mol</span><span class="o">.</span><span class="n">GetSubstructMatches</span><span class="p">(</span><span class="n">RotatableBondSmarts</span><span class="p">)]</span>
+    <span class="n">shortest_path</span> <span class="o">=</span> <span class="n">shortest_paths</span><span class="p">[(</span><span class="n">atom_index_a</span><span class="p">,</span> <span class="n">atom_index_b</span><span class="p">)]</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">shortest_path</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">mol</span><span class="o">.</span><span class="n">GetBondWithIdx</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">shortest_path</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span><span class="o">.</span><span class="n">IsInRing</span><span class="p">():</span>
+            <span class="n">add</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">shortest_path</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">shortest_path</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">rotatable_bonds</span> <span class="ow">and</span> <span class="n">shortest_path</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">rotatable_bonds</span><span class="p">:</span>
+            <span class="n">add</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">shortest_path</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">shortest_path</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">rotatable_bonds</span><span class="p">:</span>
+                <span class="n">add</span> <span class="o">=</span> <span class="kc">False</span>
+                <span class="k">break</span>
+
+    <span class="k">return</span> <span class="n">add</span></div>
+
+
+<div class="viewcode-block" id="get_atom_pair_restrict_to_non_ring"><a class="viewcode-back" href="../../vonmises.html#vonmises.confdists.get_atom_pair_restrict_to_non_ring">[docs]</a><span class="k">def</span> <span class="nf">get_atom_pair_restrict_to_non_ring</span><span class="p">(</span><span class="n">mol</span><span class="p">,</span> <span class="n">atom_index_a</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">atom_index_b</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">shortest_paths</span><span class="p">:</span> <span class="n">Dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Determine if distances between a particular pair of atoms with non-ring restriction.</span>
+
+<span class="sd">    :param mol: RDKit mol object.</span>
+<span class="sd">    :param atom_index_a: First atom index.</span>
+<span class="sd">    :param atom_index_b: Second atom index.</span>
+<span class="sd">    :param shortest_paths: Shortest paths dictionary.</span>
+<span class="sd">    :return: Boolean indicating inclusion.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">add</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">shortest_path</span> <span class="o">=</span> <span class="n">shortest_paths</span><span class="p">[(</span><span class="n">atom_index_a</span><span class="p">,</span> <span class="n">atom_index_b</span><span class="p">)]</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">shortest_path</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">mol</span><span class="o">.</span><span class="n">GetBondWithIdx</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">shortest_path</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span><span class="o">.</span><span class="n">IsInRing</span><span class="p">():</span>
+            <span class="n">add</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">shortest_path</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">mol</span><span class="o">.</span><span class="n">GetBondWithIdx</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">shortest_path</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span><span class="o">.</span><span class="n">IsInRing</span><span class="p">()</span> <span class="ow">and</span> \
+                <span class="n">mol</span><span class="o">.</span><span class="n">GetBondWithIdx</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">shortest_path</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span><span class="o">.</span><span class="n">IsInRing</span><span class="p">():</span>
+            <span class="n">add</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">shortest_path</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">mol</span><span class="o">.</span><span class="n">GetBondWithIdx</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">shortest_path</span><span class="p">[</span><span class="n">i</span><span class="p">]))</span><span class="o">.</span><span class="n">IsInRing</span><span class="p">():</span>
+                <span class="n">add</span> <span class="o">=</span> <span class="kc">False</span>
+                <span class="k">break</span>
+
+    <span class="k">return</span> <span class="n">add</span></div>
+
+
+<div class="viewcode-block" id="get_atom_pair_restrict_to_non_aromatic_ring"><a class="viewcode-back" href="../../vonmises.html#vonmises.confdists.get_atom_pair_restrict_to_non_aromatic_ring">[docs]</a><span class="k">def</span> <span class="nf">get_atom_pair_restrict_to_non_aromatic_ring</span><span class="p">(</span><span class="n">mol</span><span class="p">,</span> <span class="n">atom_index_a</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">atom_index_b</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                                                <span class="n">shortest_paths</span><span class="p">:</span> <span class="n">Dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Determine if distances between a particular pair of atoms with non-aromatic ring restriction.</span>
+
+<span class="sd">    :param mol: RDKit mol object.</span>
+<span class="sd">    :param atom_index_a: First atom index.</span>
+<span class="sd">    :param atom_index_b: Second atom index.</span>
+<span class="sd">    :param shortest_paths: Shortest paths dictionary.</span>
+<span class="sd">    :return: Boolean indicating inclusion.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">non_aromatic_ring_bonds</span> <span class="o">=</span> <span class="p">[</span><span class="n">mol</span><span class="o">.</span><span class="n">GetBondBetweenAtoms</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span><span class="o">.</span><span class="n">GetIdx</span><span class="p">()</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span>
+                               <span class="n">mol_utils</span><span class="o">.</span><span class="n">compute_non_aromatic_ring_bonds</span><span class="p">(</span><span class="n">mol</span><span class="p">)]</span>
+    <span class="n">shortest_path</span> <span class="o">=</span> <span class="n">shortest_paths</span><span class="p">[(</span><span class="n">atom_index_a</span><span class="p">,</span> <span class="n">atom_index_b</span><span class="p">)]</span>
+    <span class="n">add</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">shortest_path</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">shortest_path</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">in</span> <span class="n">non_aromatic_ring_bonds</span><span class="p">:</span>
+            <span class="n">add</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">shortest_path</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">shortest_path</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">in</span> <span class="n">non_aromatic_ring_bonds</span> <span class="ow">and</span> <span class="n">shortest_path</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="ow">in</span> <span class="n">non_aromatic_ring_bonds</span><span class="p">:</span>
+            <span class="n">add</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">shortest_path</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">shortest_path</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="ow">in</span> <span class="n">non_aromatic_ring_bonds</span><span class="p">:</span>
+                <span class="n">add</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="k">return</span> <span class="n">add</span></div>
+
+
+<div class="viewcode-block" id="compute_dihedral_hist"><a class="viewcode-back" href="../../vonmises.html#vonmises.confdists.compute_dihedral_hist">[docs]</a><span class="k">def</span> <span class="nf">compute_dihedral_hist</span><span class="p">(</span><span class="n">dist</span><span class="p">:</span> <span class="n">SampleDistribution</span><span class="p">,</span> <span class="n">bins</span><span class="o">=</span><span class="mi">32</span><span class="p">,</span> <span class="n">filler_value</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-10</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Compute histograms of rotatable bond torsion angles.</span>
+
+<span class="sd">    :param dist: SampleDistribution object with conformations.</span>
+<span class="sd">    :param bins: Number of histogram bins to use.</span>
+<span class="sd">    :param filler_value: Non-zero value to support histogram computation.</span>
+<span class="sd">    :return: Dictionary mapping bond index to histogram.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">torsion_targets</span> <span class="o">=</span> <span class="n">mol_utils</span><span class="o">.</span><span class="n">compute_torsions</span><span class="p">(</span><span class="n">dist</span><span class="o">.</span><span class="n">mol</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+    <span class="n">angles</span><span class="p">,</span> <span class="n">bond_indices</span> <span class="o">=</span> <span class="n">torsion_targets</span><span class="p">[</span><span class="s1">&#39;angles&#39;</span><span class="p">],</span> <span class="n">torsion_targets</span><span class="p">[</span><span class="s1">&#39;bond_indices&#39;</span><span class="p">]</span>
+
+    <span class="n">theta_bins</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span> <span class="n">bins</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+
+    <span class="n">out_dict</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">bond_indices</span><span class="p">,</span> <span class="n">angles</span><span class="p">):</span>
+        <span class="k">assert</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span>
+        <span class="k">assert</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span>
+        <span class="n">hist</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">histogram</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">bins</span><span class="o">=</span><span class="n">theta_bins</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">hist</span> <span class="o">=</span> <span class="n">hist</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">hist</span><span class="p">)</span>
+        <span class="n">hist</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">hist</span> <span class="o">&lt;</span> <span class="n">filler_value</span><span class="p">,</span> <span class="n">filler_value</span><span class="p">,</span> <span class="n">hist</span><span class="p">)</span>
+        <span class="n">out_dict</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">i</span><span class="p">)]</span> <span class="o">=</span> <span class="n">hist</span>
+    <span class="k">return</span> <span class="n">out_dict</span></div>
+
+
+<div class="viewcode-block" id="compute_dihedral_list"><a class="viewcode-back" href="../../vonmises.html#vonmises.confdists.compute_dihedral_list">[docs]</a><span class="k">def</span> <span class="nf">compute_dihedral_list</span><span class="p">(</span><span class="n">dist</span><span class="p">:</span> <span class="n">SampleDistribution</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Compute sets of rotatable bond torsion angles.</span>
+
+<span class="sd">    :param dist: SampleDistribution object with conformations.</span>
+<span class="sd">    :return: Dictionary mapping bond index to list of torsion angles.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">torsion_targets</span> <span class="o">=</span> <span class="n">mol_utils</span><span class="o">.</span><span class="n">compute_torsions</span><span class="p">(</span><span class="n">dist</span><span class="o">.</span><span class="n">mol</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+    <span class="n">angles</span><span class="p">,</span> <span class="n">bond_indices</span> <span class="o">=</span> <span class="n">torsion_targets</span><span class="p">[</span><span class="s1">&#39;angles&#39;</span><span class="p">],</span> <span class="n">torsion_targets</span><span class="p">[</span><span class="s1">&#39;bond_indices&#39;</span><span class="p">]</span>
+
+    <span class="n">out_dict</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">bond_indices</span><span class="p">,</span> <span class="n">angles</span><span class="p">):</span>
+        <span class="k">assert</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span>
+        <span class="k">assert</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span>
+        <span class="n">out_dict</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">i</span><span class="p">)]</span> <span class="o">=</span> <span class="n">v</span>
+    <span class="k">return</span> <span class="n">out_dict</span></div>
+
+
+<div class="viewcode-block" id="compute_distance_avg_path_lim"><a class="viewcode-back" href="../../vonmises.html#vonmises.confdists.compute_distance_avg_path_lim">[docs]</a><span class="k">def</span> <span class="nf">compute_distance_avg_path_lim</span><span class="p">(</span><span class="n">dist</span><span class="p">:</span> <span class="n">SampleDistribution</span><span class="p">,</span> <span class="n">min_atom_path_len</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span> <span class="n">max_atom_path_len</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
+                                  <span class="n">restrict_to_vm_preds</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">restrict_to_non_ring</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                                  <span class="n">restrict_to_non_aromatic_ring</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Compute average distances between pairs of atoms whose topological distance is within given bounds.</span>
+
+<span class="sd">    :param dist: SampleDistribution object with conformations.</span>
+<span class="sd">    :param min_atom_path_len: Minimum topological pairwise distance between atoms, measured in # atoms along the path.</span>
+<span class="sd">    :param max_atom_path_len: Maximum topological pairwise distance between atoms, measured in # atoms along the path.</span>
+<span class="sd">    :param restrict_to_vm_preds: Whether or not to restrict computations to VonMisesNet predictions.</span>
+<span class="sd">    :param restrict_to_non_ring: Whether or not to restrict computations to non-ring components.</span>
+<span class="sd">    :param restrict_to_non_aromatic_ring: Whether or not to restrict computations to exclude non-aromatic ring.</span>
+<span class="sd">    :return: Dictionary mapping from atom indices and path length tuple to average pairwise distance.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Topological path lengths dictionary, measured in # bonds along the path (equivalent to # atoms + 1)</span>
+    <span class="n">path_length</span> <span class="o">=</span> <span class="n">Chem</span><span class="o">.</span><span class="n">rdmolops</span><span class="o">.</span><span class="n">GetDistanceMatrix</span><span class="p">(</span><span class="n">dist</span><span class="o">.</span><span class="n">mol</span><span class="p">)</span>
+
+    <span class="c1"># Shortest paths (in bond indices) between pairs of atoms dictionary</span>
+    <span class="n">shortest_paths</span> <span class="o">=</span> <span class="n">mol_utils</span><span class="o">.</span><span class="n">get_bond_index_paths</span><span class="p">(</span><span class="n">dist</span><span class="o">.</span><span class="n">mol</span><span class="p">)</span>
+
+    <span class="c1"># Compute average distance matrix</span>
+    <span class="n">dm</span> <span class="o">=</span> <span class="n">dist</span><span class="o">.</span><span class="n">get_dist_mats</span><span class="p">()</span>
+    <span class="n">mean_dist</span> <span class="o">=</span> <span class="n">dm</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+    <span class="n">out</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">mean_dist</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">mean_dist</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+            <span class="k">if</span> <span class="n">min_atom_path_len</span> <span class="o">&lt;=</span> <span class="n">path_length</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">&lt;=</span> <span class="n">max_atom_path_len</span><span class="p">:</span>
+                <span class="n">add</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="k">if</span> <span class="n">restrict_to_vm_preds</span><span class="p">:</span>
+                    <span class="n">add</span> <span class="o">=</span> <span class="n">get_atom_pair_restrict_to_vm_preds</span><span class="p">(</span><span class="n">dist</span><span class="o">.</span><span class="n">mol</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">,</span> <span class="n">shortest_paths</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="n">restrict_to_non_ring</span><span class="p">:</span>
+                    <span class="n">add</span> <span class="o">=</span> <span class="n">get_atom_pair_restrict_to_non_ring</span><span class="p">(</span><span class="n">dist</span><span class="o">.</span><span class="n">mol</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">,</span> <span class="n">shortest_paths</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="n">restrict_to_non_aromatic_ring</span><span class="p">:</span>
+                    <span class="n">add</span> <span class="o">=</span> <span class="n">get_atom_pair_restrict_to_non_aromatic_ring</span><span class="p">(</span><span class="n">dist</span><span class="o">.</span><span class="n">mol</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">,</span> <span class="n">shortest_paths</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">add</span><span class="p">:</span>
+                    <span class="n">out</span><span class="p">[(</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">path_length</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]))]</span> <span class="o">=</span> <span class="n">mean_dist</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span>
+
+    <span class="k">return</span> <span class="n">out</span></div>
+
+
+<div class="viewcode-block" id="compute_distance_lists"><a class="viewcode-back" href="../../vonmises.html#vonmises.confdists.compute_distance_lists">[docs]</a><span class="k">def</span> <span class="nf">compute_distance_lists</span><span class="p">(</span><span class="n">dist</span><span class="p">:</span> <span class="n">SampleDistribution</span><span class="p">,</span> <span class="n">min_atom_path_len</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span> <span class="n">max_atom_path_len</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span>
+                           <span class="n">restrict_to_vm_preds</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">restrict_to_non_ring</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                           <span class="n">restrict_to_non_aromatic_ring</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Compute all distances between pairs of atoms whose topological distance is within given bounds.</span>
+
+<span class="sd">    :param dist: SampleDistribution object with conformation.</span>
+<span class="sd">    :param min_atom_path_len: Minimum topological pairwise distance between atoms, measured in # atoms along the path.</span>
+<span class="sd">    :param max_atom_path_len: Maximum topological pairwise distance between atoms, measured in # atoms along the path.</span>
+<span class="sd">    :param restrict_to_vm_preds: Whether or not to restrict computations to VonMisesNet predictions.</span>
+<span class="sd">    :param restrict_to_non_ring: Whether or not to restrict computations to non-ring components.</span>
+<span class="sd">    :param restrict_to_non_aromatic_ring: Whether or not to restrict computations to exclude non-aromatic ring.</span>
+<span class="sd">    :return: Dictionary mapping from atom indices and path length tuple to list of pairwise distance.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Topological path lengths dictionary, measured in # bonds along the path (equivalent to # atoms + 1)</span>
+    <span class="n">path_length</span> <span class="o">=</span> <span class="n">Chem</span><span class="o">.</span><span class="n">rdmolops</span><span class="o">.</span><span class="n">GetDistanceMatrix</span><span class="p">(</span><span class="n">dist</span><span class="o">.</span><span class="n">mol</span><span class="p">)</span>
+
+    <span class="c1"># Shortest paths (in bond indices) between pairs of atoms dictionary</span>
+    <span class="n">shortest_paths</span> <span class="o">=</span> <span class="n">mol_utils</span><span class="o">.</span><span class="n">get_bond_index_paths</span><span class="p">(</span><span class="n">dist</span><span class="o">.</span><span class="n">mol</span><span class="p">)</span>
+
+    <span class="n">dm</span> <span class="o">=</span> <span class="n">dist</span><span class="o">.</span><span class="n">get_dist_mats</span><span class="p">()</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">dm</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">dm</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+            <span class="k">if</span> <span class="n">min_atom_path_len</span> <span class="o">&lt;=</span> <span class="n">path_length</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">&lt;=</span> <span class="n">max_atom_path_len</span><span class="p">:</span>
+                <span class="n">add</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="k">if</span> <span class="n">restrict_to_vm_preds</span><span class="p">:</span>
+                    <span class="n">add</span> <span class="o">=</span> <span class="n">get_atom_pair_restrict_to_vm_preds</span><span class="p">(</span><span class="n">dist</span><span class="o">.</span><span class="n">mol</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">,</span> <span class="n">shortest_paths</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="n">restrict_to_non_ring</span><span class="p">:</span>
+                    <span class="n">add</span> <span class="o">=</span> <span class="n">get_atom_pair_restrict_to_non_ring</span><span class="p">(</span><span class="n">dist</span><span class="o">.</span><span class="n">mol</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">,</span> <span class="n">shortest_paths</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="n">restrict_to_non_aromatic_ring</span><span class="p">:</span>
+                    <span class="n">add</span> <span class="o">=</span> <span class="n">get_atom_pair_restrict_to_non_aromatic_ring</span><span class="p">(</span><span class="n">dist</span><span class="o">.</span><span class="n">mol</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">,</span> <span class="n">shortest_paths</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">add</span><span class="p">:</span>
+                    <span class="n">distances</span> <span class="o">=</span> <span class="p">[]</span>
+                    <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">dm</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+                        <span class="n">distances</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">dm</span><span class="p">[</span><span class="n">k</span><span class="p">][</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">])</span>
+                    <span class="n">out</span><span class="p">[(</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">path_length</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]))]</span> <span class="o">=</span> <span class="n">distances</span>
+    <span class="k">return</span> <span class="n">out</span></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Kirk Swanson, Jake Williams, Eric Jonas.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
