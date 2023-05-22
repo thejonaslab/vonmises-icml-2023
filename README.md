@@ -7,14 +7,14 @@ respect to the Boltzmann distribution and orders of magnitude faster than existi
 
 ## Installation
 conformation-vonmises can be installed from source:
-1. ```git clone --branch ks8/release https://github.com/thejonaslab/conformation-vonmises.git```
+1. ```git clone https://github.com/thejonaslab/vonmises-icml-2023.git```
 2. ```cd conformation-vonmises```
 3. ```conda env create -n $NAME -f environment.yml```, where $NAME is the desired name of the environment
 4. ```conda activate $NAME```
 5. ```pip install -e .```
 
 ## Documentation
-Documentation can be found at ```docs/_build/html/vonmises.html``` (will go on ReadTheDocs for release).
+Documentation can be found at TBD...
 
 ## Conformation Generation
 VonMisesNet can be used to generate conformations for arbitrary molecules. To do so, create a csv file containing a 
@@ -76,7 +76,7 @@ molecules from NMRShiftDB, and ```GDB-17-stereo-pt-conf-mols.db```, which contai
 
 To use these for training:
 1. ```cd conformation-vonmises```
-2. ```cp /jonaslab/projects/conformation/data/mol-data/data.targ.gz .``` (This will be moved to file server for actual release.) 
+2. Download from TDB... 
 3. ```tar -xvf data.tar.gz```
 4. Run ```python generate_db_targets.py```, which extracts training targets from the molecules in these datasets.
 
@@ -109,6 +109,6 @@ configuration files for the NMRShiftDB data and the GDB-17 data, respectively.
 To reproduce figures in the paper:
 
 1. ```cd conformation-vonmises```
-2. ```cp /jonaslab/projects/conformation/data/mol-data/results.tar.gz .``` (This will be moved to file server for actual release.) 
+2. Download from TBD... 
 3. ```tar -xvf results.tar.gz```
 4. Follow the step-by-step instructions in ```paper_figures.ipynb```.
