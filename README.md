@@ -6,9 +6,9 @@ respect to the Boltzmann distribution and orders of magnitude faster than existi
 
 
 ## Installation
-conformation-vonmises can be installed from source:
+vonmises-icml-2023 can be installed from source:
 1. ```git clone https://github.com/thejonaslab/vonmises-icml-2023.git```
-2. ```cd conformation-vonmises```
+2. ```cd vonmises-icml-2023```
 3. ```conda env create -n $NAME -f environment.yml```, where $NAME is the desired name of the environment
 4. ```conda activate $NAME```
 5. ```pip install -e .```
@@ -75,7 +75,7 @@ There are currently two datasets available to train VonMisesNet: ```nmrshiftdb-p
 molecules from NMRShiftDB, and ```GDB-17-stereo-pt-conf-mols.db```, which contains molecules from GDB-17. 
 
 To use these for training:
-1. ```cd conformation-vonmises```
+1. ```cd vonmises-icml-2023```
 2. Download from TDB... 
 3. ```tar -xvf data.tar.gz```
 4. Run ```python generate_db_targets.py```, which extracts training targets from the molecules in these datasets.
@@ -108,7 +108,7 @@ configuration files for the NMRShiftDB data and the GDB-17 data, respectively.
 ## Reproducing Paper Evaluations 
 To reproduce figures in the paper:
 
-1. ```cd conformation-vonmises```
+1. ```cd vonmises-icml-2023```
 2. Download from TBD... 
 3. ```tar -xvf results.tar.gz```
 4. Follow the step-by-step instructions in ```paper_figures.ipynb```.
