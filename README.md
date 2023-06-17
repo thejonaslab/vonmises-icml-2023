@@ -9,7 +9,7 @@ respect to the Boltzmann distribution and orders of magnitude faster than existi
 vonmises-icml-2023 can be installed from source:
 1. ```git clone https://github.com/thejonaslab/vonmises-icml-2023.git```
 2. ```cd vonmises-icml-2023```
-3. ```conda env create -n $NAME -f environment.yml```, where $NAME is the desired name of the environment
+3. ```conda env create -n $NAME -f environment.yml```, where $NAME is the desired name of the environment. Comment out the line containing `cudatoolkit` if installing on a machine without a GPU.
 4. ```conda activate $NAME```
 5. ```pip install -e .```
 
@@ -28,7 +28,7 @@ python generate_confs_from_smiles.py --csv_path <path-to-smiles-csv> --out_path 
 - ```--out_path```: Path to the output pickle file, which contains RDKit mol objects with generated conformations and prediction metadata. 
 - ```--model_path```: Path to the VonMisesNet model parameters. 
 - ```--model_config_path```: Path to the VonMisesNet model config yaml file.
-- ```--num_confs```: Number of conformations to generate.
+- ```--num_confs```: Number of conformations to generate per molecule.
 - ```--filter_confs```: Optional filtering of conformations which violate minimum atomic distance thresholds.
 
 For the model trained on NMRShiftDB data described in the paper, use:
@@ -76,7 +76,7 @@ molecules from NMRShiftDB, and ```GDB-17-stereo-pt-conf-mols.db```, which contai
 
 To use these for training:
 1. ```cd vonmises-icml-2023```
-2. Download from TDB... 
+2. Download from TBD... 
 3. ```tar -xvf data.tar.gz```
 4. Run ```python generate_db_targets.py```, which extracts training targets from the molecules in these datasets.
 
