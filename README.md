@@ -7,6 +7,10 @@ respect to the Boltzmann distribution and orders of magnitude faster than existi
 ## Table of Contents
 - [Installation](#installation)
 - [Documentation](#documentation)
+- [Conformation Generation](#conformation-generation)
+- [Training Data](#training-data)
+- [Training](#training)
+- [Reproducing Paper Evaluations](#reproducing-paper-evaluations)
 
 ## Installation
 vonmises-icml-2023 can be installed from source:
