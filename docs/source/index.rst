@@ -10,6 +10,7 @@ Welcome to vonmises-icml-2023's documentation!
    :maxdepth: 2
    :caption: Contents:
 
+   modules
 
 
 Indices and tables
