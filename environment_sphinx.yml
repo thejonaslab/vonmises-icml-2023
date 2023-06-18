@@ -1,0 +1,16 @@
+channels:
+  - pytorch
+  - conda-forge
+  - rdkit
+  - pyg
+
+dependencies:
+  - python=3.9
+  - pytorch=1.11.0
+  - conda-forge::rdkit=2022.03.5
+  - numpy=1.23.3
+  - pip=22.2.2
+  - cython=0.29.32
+  - pip:
+      - networkx==2.8.8
+      - sqlalchemy==1.4.45
