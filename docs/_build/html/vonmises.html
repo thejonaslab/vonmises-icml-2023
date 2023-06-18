@@ -4,14 +4,15 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>vonmises package &mdash; conformation-vonmises  documentation</title>
+  <title>vonmises package &mdash; vonmises-icml-2023  documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
   <!--[if lt IE 9]>
     <script src="_static/js/html5shiv.min.js"></script>
   <![endif]-->
   
-        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
         <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
         <script src="_static/doctools.js"></script>
         <script src="_static/sphinx_highlight.js"></script>
@@ -30,7 +31,7 @@
           
           
           <a href="index.html" class="icon icon-home">
-            conformation-vonmises
+            vonmises-icml-2023
           </a>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
@@ -178,7 +179,7 @@
 
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="index.html">conformation-vonmises</a>
+          <a href="index.html">vonmises-icml-2023</a>
       </nav>
 
       <div class="wy-nav-content">
@@ -1978,9 +1979,9 @@ compensate for numerical precision issues.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>model_path</strong> (<em>str</em>) – </p></li>
-<li><p><strong>model_config_path</strong> (<em>str</em>) – </p></li>
-<li><p><strong>use_cuda</strong> (<em>bool</em>) – </p></li>
+<li><p><strong>model_path</strong> (<em>str</em>) – Path to model parameters file.</p></li>
+<li><p><strong>model_config_path</strong> (<em>str</em>) – Path to model yaml config file.</p></li>
+<li><p><strong>use_cuda</strong> (<em>bool</em>) – Whether to use CUDA.</p></li>
 </ul>
 </dd>
 </dl>
@@ -1988,7 +1989,8 @@ compensate for numerical precision issues.</p>
 <dt class="sig sig-object py" id="vonmises.predictor.Predictor.predict">
 <span class="sig-name descname"><span class="pre">predict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mols</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">smiles_input</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">generate_initial_geometry</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">initial_geometry_seed</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">initial_geometry_max_attempts</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_etkdg_clean</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">conform_to_existing_conf_idx</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/vonmises/predictor.html#Predictor.predict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#vonmises.predictor.Predictor.predict" title="Permalink to this definition"></a></dt>
 <dd><p>Generate predictions with von Mises model. If generate_initial_geometry is false, each input mol is required
-to have at least one embedded conformation. The first conformation is used as the starting point.</p>
+to have at least one embedded conformation. The first conformation is used as the starting point. VonMisesNet
+expects usage of explicit H atoms.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -2014,7 +2016,7 @@ to have at least one embedded conformation. The first conformation is used as th
 
 <dl class="py function">
 <dt class="sig sig-object py" id="vonmises.predictor.generate_confs">
-<span class="sig-prename descclassname"><span class="pre">vonmises.predictor.</span></span><span class="sig-name descname"><span class="pre">generate_confs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">predictions</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_confs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filter_confs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_attempts</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2000</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/vonmises/predictor.html#generate_confs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#vonmises.predictor.generate_confs" title="Permalink to this definition"></a></dt>
+<span class="sig-prename descclassname"><span class="pre">vonmises.predictor.</span></span><span class="sig-name descname"><span class="pre">generate_confs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">predictions</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_confs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filter_confs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_attempts</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/vonmises/predictor.html#generate_confs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#vonmises.predictor.generate_confs" title="Permalink to this definition"></a></dt>
 <dd><p>Generate conformations from VonMisesNet predictions.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
