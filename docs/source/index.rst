@@ -17,6 +17,7 @@ respect to the Boltzmann distribution and orders of magnitude faster than existi
    :caption: Contents:
    
    installation
+   dbdataset
    modules
 
 

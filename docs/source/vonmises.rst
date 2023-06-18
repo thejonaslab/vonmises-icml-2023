@@ -12,14 +12,6 @@ vonmises.confdists module
    :undoc-members:
    :show-inheritance:
 
-vonmises.dbdataset module
--------------------------
-
-.. automodule:: vonmises.dbdataset
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 vonmises.etkdg module
 ---------------------
 
