@@ -4,6 +4,3 @@ sphinx:
   configuration: docs/source/conf.py
 
 formats: all
-
-conda:
-  environment: environment_sphinx.yml
