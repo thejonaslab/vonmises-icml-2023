@@ -16,9 +16,10 @@ author = 'Kirk Swanson, Jake Williams, Eric Jonas'
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = [
-        'autoapi.extension'
+        'sphinx.ext.autodoc',
+        'sphinx.ext.viewcode',
+        'sphinx.ext.napoleon'
         ]
-autoapi_dirs = ['../../vonmises']
 templates_path = ['_templates']
 exclude_patterns = []
 
