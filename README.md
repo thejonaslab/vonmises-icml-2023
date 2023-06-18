@@ -1,9 +1,12 @@
 # VonMisesNet: Von Mises Mixture Distributions for Molecular Conformation Generation 
 
-This repository implements Von Mises Mixture Distributions for Molecular Conformation Generation. VonMisesNet is a new 
+This repository implements VonMisesNet, as described in the paper [Von Mises Mixture Distributions for Molecular Conformation Generation](https://arxiv.org/pdf/2306.07472.pdf). VonMisesNet is a new 
 graph neural network that can generate conformations for molecules in a way that is both physically accurate with 
 respect to the Boltzmann distribution and orders of magnitude faster than existing sampling methods.  
 
+## Table of Contents
+- [Installation](#installation)
+- [Documentation](#documentation)
 
 ## Installation
 vonmises-icml-2023 can be installed from source:
@@ -14,7 +17,7 @@ vonmises-icml-2023 can be installed from source:
 5. ```pip install -e .```
 
 ## Documentation
-Documentation can be found at TBD...
+Documentation can be found [here](https://vonmises-icml-2023.readthedocs.io/en/latest/). 
 
 ## Conformation Generation
 VonMisesNet can be used to generate conformations for arbitrary molecules. To do so, create a csv file containing a 
