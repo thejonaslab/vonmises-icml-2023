@@ -83,7 +83,7 @@ molecules from NMRShiftDB, and ```GDB-17-stereo-pt-conf-mols.db```, which contai
 
 To use these for training:
 1. ```cd vonmises-icml-2023```
-2. Download from TBD... 
+2. Download ```data.tar.gz``` from [here](https://drive.google.com/drive/folders/1eDhBFzCiwgDR37v1UZKMuRH51t2ScDY7?usp=drive_link).
 3. ```tar -xvf data.tar.gz```
 4. Run ```python generate_db_targets.py```, which extracts training targets from the molecules in these datasets.
 
@@ -116,6 +116,6 @@ configuration files for the NMRShiftDB data and the GDB-17 data, respectively.
 To reproduce figures in the paper:
 
 1. ```cd vonmises-icml-2023```
-2. Download from TBD... 
+2. Download ```results.tar.gz``` from [here](https://drive.google.com/drive/folders/1eDhBFzCiwgDR37v1UZKMuRH51t2ScDY7?usp=drive_link). 
 3. ```tar -xvf results.tar.gz```
 4. Follow the step-by-step instructions in ```paper_figures.ipynb```.
