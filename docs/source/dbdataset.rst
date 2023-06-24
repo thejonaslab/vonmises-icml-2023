@@ -1,4 +1,4 @@
-.. _dataset:
+.. _dbdataset:
 
 Dataset Functions
 =================
